@@ -12,8 +12,7 @@ Gem::Specification.new do |spec|
   spec.summary       = %q{Convert a ttyrec record into a gif animation directly (almost vt102 compatible terminal emulation).}
 
   spec.files         << `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
-  seq2gif = lambda {|f| "vendor/seq2gif/#{f}" }
-  spec.files         << `cd vendor/seq2gif && git ls-files -z`.split("\x0").map(&seq2gif)
+  spec.files         << `find vendor/seq2gif -print0 -type f`.split("\x0").reject { |f| f.match(%r{^(tests|images)/}) }
   spec.bindir        = "exe"
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]

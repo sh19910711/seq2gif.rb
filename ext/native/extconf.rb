@@ -1,4 +1,5 @@
 require "mkmf"
+require "pathname"
 
 root = Pathname(File.expand_path("../../../", __FILE__))
 ext = root.join("ext/native")
