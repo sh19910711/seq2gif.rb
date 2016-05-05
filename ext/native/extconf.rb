@@ -1,11 +1,12 @@
 require "mkmf"
 
 root = Pathname(File.expand_path("../../../", __FILE__))
-ext = root.join("ext/seq2gif")
+ext = root.join("ext/native")
 vendor = root.join("vendor")
 
 Dir.chdir(vendor.join("seq2gif")) do
-  system "patch Makefile.in < 0001-make-libseq2gif.patch"
+  patch = ext.join("0001-make-libseq2gif.patch")
+  system "patch -N -R --dry-run --silent  Makefile.in < #{patch} || patch Makefile.in < #{patch}"
   system "CFLAGS=-fPIC ./configure && make libseq2gif.a"
 end
 
