@@ -1,0 +1,3 @@
+[submodule "vendor/seq2gif"]
+	path = vendor/seq2gif
+	url = https://github.com/saitoha/seq2gif
