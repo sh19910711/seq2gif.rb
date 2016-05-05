@@ -1,0 +1,27 @@
+From 6880e198d30f09f01828fb3681a4059b7e8ae9d0 Mon Sep 17 00:00:00 2001
+From: Hiroyuki Sano <sh19910711@gmail.com>
+Date: Thu, 5 May 2016 18:28:05 +0900
+Subject: [PATCH] patch
+
+---
+ Makefile.in | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/Makefile.in b/Makefile.in
+index 85625a7..0d33f0b 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -903,6 +903,10 @@ uninstall-am: uninstall-binPROGRAMS
+ 	mostlyclean-generic pdf pdf-am ps ps-am tags tags-am uninstall \
+ 	uninstall-am uninstall-binPROGRAMS
+ 
++LIBOBJECTS = $(filter-out $(wildcard *.h), $(filter-out main.o, $(seq2gif_SOURCES:.c=.o)))
++LIBTARGET = libseq2gif.a
++$(LIBTARGET): $(LIBOBJECTS)
++	ar rcs $(LIBTARGET) $(LIBOBJECTS)
+ 
+ test: all
+ 	./seq2gif -i tests/data/sl.tty -o /dev/null
+-- 
+2.8.2
+

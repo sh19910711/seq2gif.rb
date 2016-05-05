@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2014 haru <uobikiemukot at gmail dot com>
  * Copyright (C) 2014 Hayaki Saito <user@zuse.jp>
+ * Copyright (C) 2016 Hiroyuki Sano
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,15 +17,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "config.h"
-#include "yaft.h"
-#include "util.h"
-#include "pseudo.h"
-#include "terminal.h"
-#include "function.h"
-#include "dcs.h"
-#include "parse.h"
-#include "gifsave89.h"
+#include <ruby.h>
+
+#include "seq2gif/config.h"
+#include "seq2gif/yaft.h"
+#include "seq2gif/util.h"
+#include "seq2gif/pseudo.h"
+#include "seq2gif/terminal.h"
+#include "seq2gif/function.h"
+#include "seq2gif/dcs.h"
+#include "seq2gif/parse.h"
+#include "seq2gif/gifsave89.h"
 
 #include <stdio.h>
 
@@ -186,193 +189,6 @@ static size_t write_gif(unsigned char *gifimage, int size, FILE *f)
     return wsize;
 }
 
-static void show_version()
-{
-    printf(PACKAGE_NAME " " PACKAGE_VERSION "\n"
-           "Copyright (C) 2014 haru <uobikiemukot at gmail dot com>\n"
-           "Copyright (C) 2012-2014 Hayaki Saito <user@zuse.jp>.\n"
-           "\n"
-           "This program is free software; you can redistribute it and/or modify\n"
-           "it under the terms of the GNU General Public License as published by\n"
-           "the Free Software Foundation; either version 3 of the License, or\n"
-           "(at your option) any later version.\n"
-           "\n"
-           "This program is distributed in the hope that it will be useful,\n"
-           "but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
-           "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n"
-           "GNU General Public License for more details.\n"
-           "\n"
-           "You should have received a copy of the GNU General Public License\n"
-           "along with this program. If not, see http://www.gnu.org/licenses/.\n"
-           "%s\n", copyright
-          );
-}
-
-static void show_help()
-{
-    fprintf(stderr,
-            "Usage: seq2gif [Options] < ttyrecord > record.gif\n"
-            "       seq2gif [Options] -i ttyrecord -o record.gif\n"
-            "\n"
-            "Options:\n"
-            "-w WIDTH, --width=WIDTH               specify terminal width in cell size.\n"
-            "                                      (default: 80)\n"
-            "-h HEIGHT, --height=HEIGHT            specify terminal height in cell size.\n"
-            "                                      (default: 24)\n"
-            "-l DELAY, --last-frame-delay=DELAY    specify delay in msec which is added\n"
-            "                                      to the last frame. (default: 300)\n"
-            "-f COLORNO --foreground-color=COLORNO specify foreground color palette.\n"
-            "                                      number.\n"
-            "-b COLORNO --background-color=COLORNO specify background color palette\n"
-            "                                      number.\n"
-            "-c COLORNO --cursor-color=COLORNO     specify cursor color palette\n"
-            "                                      number.\n"
-            "-t TABSTOP --tabstop=TABSTOP          specify hardware tabstop(default: 8)\n"
-            "-j --cjkwidth                         treat East Asian Ambiguous width\n"
-            "                                      characters (UAX#11) as wide.\n"
-            "-r COUNT --repeat=COUNT               specify animation repeat count. loop\n"
-            "                                      infinitely if 0 is given. (default: 0)\n"
-            "-i FILE --input=FILE                  specify input file name. use STDIN\n"
-            "                                      if '-' is given. (default: '-')\n"
-            "-o FILE --output=FILE                 specify output file name. use STDOUT\n"
-            "                                      if '-' is given. (default: '-')\n"
-            "-V, --version                         show version and license information.\n"
-            "-H, --help                            show this help.\n"
-           );
-}
-
-static int parse_args(int argc, char *argv[], struct settings_t *psettings)
-{
-    int long_opt;
-    int n;
-    char const *optstring = "w:h:HVl:f:b:c:t:jr:i:o:";
-#if HAVE_GETOPT_LONG
-    int option_index;
-#endif  /* HAVE_GETOPT_LONG */
-
-#if HAVE_GETOPT_LONG
-    struct option long_options[] = {
-        {"width",             required_argument,  &long_opt, 'w'},
-        {"height",            required_argument,  &long_opt, 'h'},
-        {"last-frame-delay",  required_argument,  &long_opt, 'l'},
-        {"foreground-color",  required_argument,  &long_opt, 'f'},
-        {"background-color",  required_argument,  &long_opt, 'b'},
-        {"cursor-color",      required_argument,  &long_opt, 'c'},
-        {"tabstop",           required_argument,  &long_opt, 't'},
-        {"cjkwidth",          no_argument,        &long_opt, 'j'},
-        {"repeat",            required_argument,  &long_opt, 'r'},
-        {"input",             required_argument,  &long_opt, 'i'},
-        {"output",            required_argument,  &long_opt, 'o'},
-        {"help",              no_argument,        &long_opt, 'H'},
-        {"version",           no_argument,        &long_opt, 'V'},
-        {0, 0, 0, 0}
-    };
-#endif  /* HAVE_GETOPT_LONG */
-
-    for (;;) {
-
-#if HAVE_GETOPT_LONG
-        n = getopt_long(argc, argv, optstring,
-                        long_options, &option_index);
-#else
-        n = getopt(argc, argv, optstring);
-#endif  /* HAVE_GETOPT_LONG */
-        if (n == -1) {
-            break;
-        }
-        if (n == 0) {
-            n = long_opt;
-        }
-        switch(n) {
-        case 'w':
-            psettings->width = atoi(optarg);
-            if (psettings->width < 1) {
-                goto argerr;
-            }
-            break;
-        case 'h':
-            psettings->height = atoi(optarg);
-            if (psettings->height < 1) {
-                goto argerr;
-            }
-            break;
-        case 'l':
-            psettings->last_frame_delay = atoi(optarg);
-            if (psettings->last_frame_delay < 0) {
-                goto argerr;
-            }
-            break;
-        case 'f':
-            psettings->foreground_color = atoi(optarg);
-            if (psettings->foreground_color < 0) {
-                goto argerr;
-            }
-            if (psettings->foreground_color > 255) {
-                goto argerr;
-            }
-            break;
-        case 'b':
-            psettings->background_color = atoi(optarg);
-            if (psettings->background_color < 0) {
-                goto argerr;
-            }
-            if (psettings->background_color > 255) {
-                goto argerr;
-            }
-            break;
-        case 'c':
-            psettings->cursor_color = atoi(optarg);
-            if (psettings->cursor_color < 0) {
-                goto argerr;
-            }
-            if (psettings->cursor_color > 255) {
-                goto argerr;
-            }
-            break;
-        case 't':
-            psettings->tabwidth = atoi(optarg);
-            if (psettings->tabwidth < 0) {
-                goto argerr;
-            }
-            if (psettings->tabwidth > 255) {
-                goto argerr;
-            }
-            break;
-        case 'j':
-            psettings->cjkwidth = 1;
-            break;
-        case 'r':
-            psettings->repeat = atoi(optarg);
-            if (psettings->repeat < 0) {
-                goto argerr;
-            }
-            if (psettings->repeat > 0xffff) {
-                goto argerr;
-            }
-            break;
-        case 'i':
-            psettings->input = strdup(optarg);
-            break;
-        case 'o':
-            psettings->output = strdup(optarg);
-            break;
-        case 'H':
-            psettings->show_help = 1;
-            break;
-        case 'V':
-            psettings->show_version = 1;
-            break;
-        default:
-            goto argerr;
-        }
-    }
-    return 0;
-
-argerr:
-    show_help();
-    return 1;
-}
-
 static FILE * open_input_file(char const *filename)
 {
     FILE *f;
@@ -464,7 +280,7 @@ static int32_t readlen(FILE *f, uint8_t *obuf)
     return len;
 }
 
-int main(int argc, char *argv[])
+static VALUE main(VALUE self, VALUE input, VALUE output)
 {
     uint8_t *obuf;
     ssize_t nread;
@@ -501,20 +317,6 @@ int main(int argc, char *argv[])
         NULL,   /* output */
     };
 
-    if (parse_args(argc, argv, &settings) != 0) {
-        exit(1);
-    }
-
-    if (settings.show_help) {
-        show_help();
-        exit(0);
-    }
-
-    if (settings.show_version) {
-        show_version();
-        exit(0);
-    }
-
     /* init */
     pb_init(&pb, settings.width * CELL_WIDTH, settings.height * CELL_HEIGHT);
     term_init(&term, pb.width, pb.height,
@@ -531,11 +333,15 @@ int main(int argc, char *argv[])
         free(img);
         term_die(&term);
         pb_die(&pb);
-        return EXIT_FAILURE;
+        return INT2FIX(1);
     }
 
     animategif(gsdata, /* repetitions */ settings.repeat, 0,
         /* transparent background */  -1, /* disposal */ 2);
+
+
+    settings.input = strndup(RSTRING_PTR(input), 256);
+    settings.output = strndup(RSTRING_PTR(output), 256);
 
     in_file = open_input_file(settings.input);
     out_file = open_output_file(settings.output);
@@ -607,7 +413,13 @@ int main(int argc, char *argv[])
     pb_die(&pb);
     free(obuf);
 
-    return nret;
+    return INT2FIX(nret);
+}
+
+void Init_native() {
+    VALUE m = rb_define_module("Seq2gif");
+    VALUE c = rb_define_class_under(m, "Native", rb_cObject);
+    rb_define_singleton_method(c, "main", main, 2);
 }
 
 /* emacs, -*- Mode: C; tab-width: 4; indent-tabs-mode: nil -*- */
